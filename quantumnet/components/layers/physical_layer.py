@@ -156,14 +156,17 @@ class PhysicalLayer():
         # Alice e Bob criam um par EPR
         qubit1 = alice.get_last_qubit()
         qubit2 = bob.get_last_qubit()
-        epr_fidelity = qubit1.current_fidelity * qubit2.current_fidelity
-        self.create_epr_pair(epr_fidelity)
+        epr_fidelity = qubit1.get_current_fidelity() * qubit2.get_current_fidelity()
+        epr =  self.create_epr_pair(epr_fidelity)
     
         # Checa a fidelidade
         fidelity = self.fidelity_measurement(qubit1, qubit2)
         
         # Pode dar errado tanto pela probabilidade, quanto pela fidelidade
         if fidelity > 0.9:
+            alice_host_id = alice.host_id  # Acessa o ID do host diretamente
+            bob_host_id = bob.host_id      # Acessa o ID do host diretamente
+            self._network.edges[(alice_host_id, bob_host_id)]['eprs'].append(epr)
             self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido.')
             # Adicionar par EPR no canal
             return True

@@ -28,12 +28,16 @@ class LinkLayer():
         self._network = network
         self._physical_layer = physical_layer
         self._requests = []
+        self._failed_requests = []
         self.logger = Logger.get_instance()
     
     @property
     def requests(self):
         return self._requests
     
+    @property
+    def failed_requests(self):
+        return self._failed_requests
     
     def __str__(self):
         """ Retorna a representação em string da camada de enlace. 
@@ -41,6 +45,7 @@ class LinkLayer():
         returns:
             str : Representação em string da camada de enlace."""
         return f'Link Layer{self.link_layer_id}'
+
 
     def purification(self, channel: tuple):
         """
@@ -50,6 +55,7 @@ class LinkLayer():
         # Não tá removendo o EPR do canal
         
         # Obtendo informações dos EPRs do canal
+        alice, bob = channel
         eprs = self._network.get_eprs_from_edge(channel)
         f1 = eprs[-1].get_current_fidelity()
         f2 = eprs[-2].get_current_fidelity()
@@ -59,12 +65,36 @@ class LinkLayer():
         if uniform(0, 1) < purification_prob:
             new_fidelity = (f1 * f2) / ((f1 * f2) + ((1 - f1) * (1 - f2)))
             epr_purificated = Epr(new_fidelity)
-            self._network.physical_layer.add_epr_to_channel(epr_purificated, channel)
+            self._network.physical_layer.add_epr_to_channel(epr_purificated, (alice,bob))
             return True
+        else:
         # Se a purificação falhar
-        return self._network.remove_epr(channel)
+            return self._network.remove_epr(channel)
+        
 
-    def request(self, alice: Host, bob: Host):	
+
+    # def request(self, alice: Host, bob: Host):	
+    #     """
+    #     Solicita tentativa de criação de entrelaçamento.
+        
+    #     args:
+    #         host_id : int : Id do host.
+    #         target_host_id : int : Id do host alvo.
+    #     """
+    #     alice = self._network.get_host(alice)
+    #     bob = self._network.get_host(bob)
+    #     entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice, bob)
+    #     if entangle == True:
+    #         self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice} e Host {bob}.')
+    #     else:
+    #         self.logger.log(f'O entrelaçamento não foi criado com sucesso.')	
+
+
+
+
+
+
+    def request(self, alice: Host, bob: Host):    
         """
         Solicita tentativa de criação de entrelaçamento.
         
@@ -74,41 +104,26 @@ class LinkLayer():
         """
         alice = self._network.get_host(alice)
         bob = self._network.get_host(bob)
-        entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice, bob)
-        if entangle == True:
-            self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice} e Host {bob}.')
-        else:
-            self.logger.log(f'O entrelaçamento não foi criado com sucesso.')	
- 
+        for _ in range(2):  # Duas tentativas
+            entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice, bob)
+            if entangle == True:
+                self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice} e Host {bob}.')
+                return  # Sai da função se o entrelaçamento for bem-sucedido
+            else:
+                # Se a tentativa falhar, adiciona o par EPR à lista de solicitações falhadas
+                self._failed_requests.append((alice, bob))
+        # Se as duas tentativas falharem, purifique os dois últimos pares EPR
+        last_failed_requests = self._failed_requests[-2:]
+        for request in last_failed_requests:
+            if self.purification(request[0], request[1]):
+                self.logger.log(f'A purificação do entrelaçamento entre Host {request[0]} e Host {request[1]} foi bem-sucedida.')
+                self._failed_requests.remove(request)  # Remove o par EPR da lista de solicitações falhadas
+            else:
+                self.logger.log(f'A purificação do entrelaçamento falhou entre Host {request[0]} e Host {request[1]}.')
+                self._network.remove_epr(request)
     
     
     
         
         
-    # def entanglement_generation_protocol(self, alice: int, bob: int, fidelity: float):
-    #     """
-    #     Protocolo de geração de entrelaçamento.
-        
-    #     args:
-    #         alice : int : Id do host.
-    #         bob : int : Id do host alvo.
-    #         fidelity : float : Fidelidade mínima.
-    #     """
-    #     alice = self._network.get_host(alice)
-    #     bob = self._network.get_host(bob)
-    #     entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice,bob)
-    #     if entangle.fidelity < fidelity:
-    #         self.logger.log(f'O Host {alice} solicitou tentativa de criação de entrelaçamento com o Host {bob}.')
-    #         self.purification(alice,bob)
-    #     else:
-    #         self.logger.log(f'O Host {alice} solicitou tentativa de criação de entrelaçamento com o Host {bob}.')
-    #         self.logger.log(f'Entrelaçamento criado com sucesso entre o Host {alice} e o Host {bob}.')
-    #         self._requests.append(entangle)
-    #    if entangle == True:
-    #         self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice} e Host {bob}.')
-    #     elif entangle == False:
-    #         self._physical_layer.entanglement_creation_heralding_protocol(alice,bob)
-    #         self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice} e Host {bob}.')
-    #     else: 
-    #         self.logger.log(f'Entrelaçamento não criado entre Host {alice} e Host {bob}.')
-    #         self.purification(alice,bob)
+    

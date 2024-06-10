@@ -157,7 +157,7 @@ class Network():
         edge = (alice, bob)
         return self._graph.edges[edge]['eprs']
     
-    def remove_epr(self, alice: int, bob: int):
+    def remove_epr(self, alice: int, bob: int) -> list:
         """
         Remove um EPR de um canal.
 
@@ -208,10 +208,7 @@ class Network():
         self.start_channels()
     
     
-    
-    
-    
-    def start_hosts(self, num_qubits: int = 1):
+    def start_hosts(self, num_qubits: int = 4 ):
         """
         Inicializa os hosts da rede.
         
