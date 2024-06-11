@@ -16,6 +16,7 @@ class PhysicalLayer():
         self._physical_layer_id = physical_layer_id
         self._network = network
         self._qubits = []
+        self._failed_eprs = []
         self._initial_qubits_fidelity = random.uniform(self.min_prob, self.max_prob)
         self._count_qubit = 0
         self._count_epr = 0
@@ -47,7 +48,17 @@ class PhysicalLayer():
             list : Lista de qubits da camada física.
         """
         return self._qubits
-
+    
+    @property
+    def failed_eprs(self):
+        """
+        Retorna os pares EPR que falharam.
+        
+        returns:
+            dict : Dicionário de pares EPR que falharam.
+        """
+        return self._failed_eprs
+    
     def create_qubit(self, host_id: int):
         """
         Cria um qubit e adiciona à memória do host especificado.
@@ -83,27 +94,6 @@ class PhysicalLayer():
         """
         epr = Epr(self._count_epr, fidelity)
         return epr
-    
-    # def epr_pair(self, alice_host_id: int, bob_host_id: int):
-    #     """
-    #     Cria um par de qubits entrelaçados entre dois hosts.
-
-    #     Args:
-    #         alice_host_id (int): ID do host de Alice.
-    #         bob_host_id (int): ID do host de Bob.
-
-    #     Returns:
-    #         Epr: Par de qubits entrelaçados.
-    #     """
-    #     # Obtendo os qubits de Alice e Bob
-    #     qubit1 = self._network.hosts[alice_host_id].get_last_qubit()
-    #     qubit2 = self._network.hosts[bob_host_id].get_last_qubit()
-        
-    #     # Criando o par EPR
-    #     epr = self.create_epr_pair(qubit1, qubit2)
-    #     self._network.edges[alice_host_id, bob_host_id]['eprs'].append(epr)
-    #     self.logger.log(f'Par EPR criado entre o qubit {qubit1} e o qubit {qubit2}.')
-    #     return epr
 
     def add_epr_to_channel(self, epr: Epr, channel: tuple):
         """
@@ -162,15 +152,18 @@ class PhysicalLayer():
         # Checa a fidelidade
         fidelity = self.fidelity_measurement(qubit1, qubit2)
         
+        alice_host_id = alice.host_id  # Acessa o ID do host diretamente
+        bob_host_id = bob.host_id      # Acessa o ID do host diretamente
+        
         # Pode dar errado tanto pela probabilidade, quanto pela fidelidade
-        if fidelity > 0.9:
-            alice_host_id = alice.host_id  # Acessa o ID do host diretamente
-            bob_host_id = bob.host_id      # Acessa o ID do host diretamente
+        if fidelity >= 0.9:
             self._network.edges[(alice_host_id, bob_host_id)]['eprs'].append(epr)
-            self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido.')
+            self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido com a fidelidade necessária.')
             # Adicionar par EPR no canal
             return True
-        self.logger.log('O protocolo de criação de emaranhamento falhou.')
+        elif fidelity < 0.9:
+            self.failed_eprs.append(epr)
+        self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido, mas com fidelidade baixa.')
         return False
 
     def echp_on_demand(self, alice_host_id: int, bob_host_id: int):
@@ -238,4 +231,6 @@ class PhysicalLayer():
             return True
         self.logger.log('A probabilidade de sucesso do ECHP falhou.')
         return False
+    
+    
     
