@@ -33,87 +33,119 @@ class LinkLayer:
             str : Representação em string da camada de enlace."""
         return f'Link Layer'
     
-    def request(self, alice_id: int, bob_id: int):    
+    def request(self, alice_id: int, bob_id: int):
         """
-        Solicita tentativa de criação de entrelaçamento.
+        request: Solicitação de criação de emaranhamento entre Alice e Bob.
         
-        Args:
-            alice_id : int : ID do host Alice.
-            bob_id : int : ID do host Bob.
+        args:
+            alice_id : int : Id do host Alice.
+            bob_id : int : Id do host Bob.
+        
         """
         alice = self._network.get_host(alice_id)
         bob = self._network.get_host(bob_id)
-        for _ in range(2):  # Duas tentativas
+        epr = Epr(alice, bob)
+        
+        # Tentar criar emaranhamento até duas vezes
+        for attempt in range(1, 3):
             entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice, bob)
             if entangle:
-                self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice_id} e Host {bob_id}.')
-                return  # Sai da função se o entrelaçamento for bem-sucedido
+                self.requests.append((alice_id, bob_id))
+                self.logger.log(f'Entrelaçamento criado entre {alice} e {bob} na tentativa {attempt}.')
+                print(f'Entrelaçamento criado entre {alice} e {bob} na tentativa {attempt}.')
+                return True
             else:
-                # Se a tentativa falhar, adiciona o par EPR à lista de solicitações falhadas
-                self._failed_requests.append((alice_id, bob_id))
-        # Se as duas tentativas falharem, purifique os dois últimos pares EPR
-        last_failed_requests = self._failed_requests[-2:]
-        for request in last_failed_requests:
-            if self.purification(*request):
-                self.logger.log(f'A purificação do entrelaçamento entre Host {request[0]} e Host {request[1]} foi bem-sucedida.')
-                self._failed_requests.remove(request)  # Remove o par EPR da lista de solicitações falhadas
-            else:
-                self.logger.log(f'A purificação do entrelaçamento falhou entre Host {request[0]} e Host {request[1]}.')
-                self._network.remove_epr(*request)  # Corrigido aqui
+                self.logger.log(f'Entrelaçamento falhou entre {alice} e {bob} na tentativa {attempt}.')
+                self.failed_requests.append((alice_id, bob_id))
+                print(f'Entrelaçamento falhou entre {alice} e {bob} na tentativa {attempt}.')
+        
                 
-    def purification(self, alice_id, bob_id):
+                
+    def purification(self, Epr: Epr, alice_id:int, bob_id:int):
         """
-        Protocolo de purificação.
-
-        Args:
-            alice_id (int): ID do host Alice.
-            bob_id (int): ID do host Bob.
+        Purificação de EPRs
+        
+        args:
+            Epr : Epr : EPR a ser purificado.
+            alice_id : int : Id do host Alice.
+            bob_id : int : Id do host Bob.
+        
+        
         """
-        # Obtendo informações dos EPRs do canal
-        eprs = self._network.get_eprs_from_edge(alice_id, bob_id)
-        if len(eprs) < 2:
+        eprs_fail = self._physical_layer.failed_eprs
+        
+        if len(eprs_fail) < 2:
             self.logger.log(f'Não há EPRs suficientes para purificação no canal ({alice_id}, {bob_id}).')
             return False
-        
-        f1 = eprs[-1].get_current_fidelity()
-        f2 = eprs[-2].get_current_fidelity()
+
+        eprs_fail1 = eprs_fail[-1]
+        eprs_fail2 = eprs_fail[-2]
+        f1 = eprs_fail1.get_current_fidelity()
+        f2 = eprs_fail2.get_current_fidelity()
 
         purification_prob = (f1 * f2) + ((1 - f1) * (1 - f2))
-        if uniform(0, 1) < purification_prob:
+        if purification_prob > 0.9:
             new_fidelity = (f1 * f2) / ((f1 * f2) + ((1 - f1) * (1 - f2)))
-            epr_purified = Epr(new_fidelity)
-            self._network.physical_layer.add_epr_to_channel(epr_purified, (alice_id, bob_id))
+            epr_purified = Epr(eprs_fail1.epr_id, new_fidelity)
+            self._network.physical.add_epr_to_channel(epr_purified, (alice_id, bob_id))
+            self._physical_layer.failed_eprs.remove(eprs_fail1)
+            self._physical_layer.failed_eprs.remove(eprs_fail2)
+            self.logger.log(f'Purificação bem sucedida no canal ({alice_id}, {bob_id}) com nova fidelidade {new_fidelity}.')
             return True
         else:
             # Se a purificação falhar
-            self._network.remove_epr(alice_id, bob_id)
+            self._physical_layer.failed_eprs.remove(eprs_fail1)
+            self._physical_layer.failed_eprs.remove(eprs_fail2)
+            self.logger.log(f'Purificação falhou no canal ({alice_id}, {bob_id}).')
             return False
-
-    # def request(self, alice_id, bob_id):
-    #     """
-    #     Solicita tentativa de criação de entrelaçamento.
-
-    #     Args:
-    #         alice_id : int : Id do host de Alice.
-    #         bob_id : int : Id do host de Bob.
-    #     """
-    #     alice = self._network.get_host(alice_id)
-    #     bob = self._network.get_host(bob_id)
-    #     for _ in range(2):  # Duas tentativas
-    #         entangle = self._physical_layer.entanglement_creation_heralding_protocol(alice, bob)
-    #         if entangle:
-    #             self.logger.log(f'Entrelaçamento criado com sucesso entre Host {alice_id} e Host {bob_id}.')
-    #             return  # Sai da função se o entrelaçamento for bem-sucedido
-    #         else:
-    #             # Se a tentativa falhar, adiciona o par EPR à lista de solicitações falhadas
-    #             self._failed_requests.append((alice_id, bob_id))
         
-    #     # Se as duas tentativas falharem, purifique os dois últimos pares EPR
-    #     last_failed_requests = self._failed_requests[-2:]
-    #     for request in last_failed_requests:
-    #         if self.purification(request[0], request[1]):
-    #             self.logger.log(f'A purificação do entrelaçamento entre Host {request[0]} e Host {request[1]} foi bem-sucedida.')
-    #             self._failed_requests.remove(request)  # Remove o par EPR da lista de solicitações falhadas
-    #         else:
-    #             self.logger.log(f'A purificação do entrelaçamento falhou entre Host {request[0]} e Host {request[1]}.')
-    #             self._network.remove_epr(request[0], request[1])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

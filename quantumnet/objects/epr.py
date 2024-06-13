@@ -1,8 +1,9 @@
+import random
 class Epr():
-    def __init__(self,  epr_id: int, initial_fidelity: float = 1.0) -> None:
+    def __init__(self,  epr_id: int, initial_fidelity: float = None) -> None:
         self._epr_id = epr_id
-        self._initial_fidelity = initial_fidelity
-        self._current_fidelity = initial_fidelity
+        self._initial_fidelity = initial_fidelity  if initial_fidelity is not None else random.uniform(0, 1)
+        self._current_fidelity = initial_fidelity  if initial_fidelity is not None else random.uniform(0, 1)
         # Ainda vamos ver se isso vai ser necessário
         # self.qubits = qubits
     
