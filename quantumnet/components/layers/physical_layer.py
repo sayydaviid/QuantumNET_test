@@ -59,6 +59,26 @@ class PhysicalLayer():
         """
         return self._failed_eprs
     
+    # def create_qubit(self, host_id: int):
+    #     """
+    #     Cria um qubit e adiciona à memória do host especificado.
+
+    #     Args:
+    #         host_id (int): ID do host onde o qubit será criado.
+
+    #     Raises:
+    #         Exception: Se o host especificado não existir na rede.
+    #     """
+    #     if host_id not in self._network.hosts:
+    #         raise Exception(f'Host {host_id} não existe na rede.')
+        
+    #     # Cria o qubit e adiciona à memória do host
+    #     qubit_id = self._count_qubit
+    #     qubit = Qubit(qubit_id, self._initial_qubits_fidelity)
+    #     self._network.hosts[host_id].add_qubit(qubit)
+    #     self._count_qubit += 1
+    #     self.logger.debug(f'Qubit {qubit_id} criado com fidelidade inicial {self._initial_qubits_fidelity} e adicionado à memória do Host {host_id}.')
+    
     def create_qubit(self, host_id: int):
         """
         Cria um qubit e adiciona à memória do host especificado.
@@ -71,14 +91,13 @@ class PhysicalLayer():
         """
         if host_id not in self._network.hosts:
             raise Exception(f'Host {host_id} não existe na rede.')
-        
+
         # Cria o qubit e adiciona à memória do host
         qubit_id = self._count_qubit
-        qubit = Qubit(qubit_id, self._initial_qubits_fidelity)
+        qubit = Qubit(qubit_id)  # Fidelidade inicial gerada internamente
         self._network.hosts[host_id].add_qubit(qubit)
         self._count_qubit += 1
-        self.logger.debug(f'Qubit {qubit_id} criado com fidelidade inicial {self._initial_qubits_fidelity} e adicionado à memória do Host {host_id}.')
-    
+        self.logger.debug(f'Qubit {qubit_id} criado com fidelidade inicial {qubit.get_initial_fidelity()} e adicionado à memória do Host {host_id}.')
 
     #Possível função genérica para entrelaçar inúmeros qubits. GHZ, W, etc.
     def entangle_n_qubits(self, qubits: list):
@@ -156,15 +175,15 @@ class PhysicalLayer():
         bob_host_id = bob.host_id      # Acessa o ID do host diretamente
         
         # Pode dar errado tanto pela probabilidade, quanto pela fidelidade
-        if fidelity >= 0.9:
+        if fidelity >= 0.8:
             self._network.edges[(alice_host_id, bob_host_id)]['eprs'].append(epr)
             self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido com a fidelidade necessária.')
             # Adicionar par EPR no canal
             return True
-        elif fidelity < 0.9:
+        elif fidelity < 0.8:
             self.failed_eprs.append(epr)
-        self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido, mas com fidelidade baixa.')
-        return False
+            self.logger.log('O protocolo de criação de emaranhamento foi bem sucedido, mas com fidelidade baixa.')
+            return False
 
     def echp_on_demand(self, alice_host_id: int, bob_host_id: int):
         """

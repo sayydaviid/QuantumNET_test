@@ -208,7 +208,7 @@ class Network():
         self.start_channels()
     
     
-    def start_hosts(self, num_qubits: int = 4 ):
+    def start_hosts(self, num_qubits: int = 20):
         """
         Inicializa os hosts da rede.
         
