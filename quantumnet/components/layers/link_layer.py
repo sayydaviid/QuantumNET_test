@@ -69,7 +69,7 @@ class LinkLayer:
             bob_id : int : Id do host Bob.
         """
         eprs_fail = self._physical_layer.failed_eprs
-        print(eprs_fail)
+        # print(eprs_fail)
         
         if len(eprs_fail) < 2:
             self.logger.log(f'Não há EPRs suficientes para purificação no canal ({alice_id}, {bob_id}).')
@@ -82,10 +82,10 @@ class LinkLayer:
         epr_two = (alice_id,bob_id)
 
         purification_prob = (f1 * f2) + ((1 - f1) * (1 - f2))
-        print(purification_prob)
+        # print(purification_prob)
         if purification_prob > 0.5:
             new_fidelity = (f1 * f2) / ((f1 * f2) + ((1 - f1) * (1 - f2)))
-            print(new_fidelity)
+            # print(new_fidelity)
             if new_fidelity > 0.8:  # Verifica se a nova fidelidade é maior que 0.8
                 epr_purified = Epr(epr_two, new_fidelity)
                 self._network.physical.add_epr_to_channel(epr_purified, (alice_id, bob_id))
