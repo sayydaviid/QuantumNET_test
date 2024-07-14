@@ -218,7 +218,7 @@ class Network():
         self.start_channels()
         self.start_eprs()
     
-    def start_hosts(self, num_qubits: int = 10):
+    def start_hosts(self, num_qubits: int = 20):
         """
         Inicializa os hosts da rede.
         

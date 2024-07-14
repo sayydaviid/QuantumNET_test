@@ -59,6 +59,26 @@ class PhysicalLayer():
         """
         return self._failed_eprs
     
+    # def create_qubit(self, host_id: int):
+    #     """
+    #     Cria um qubit e adiciona à memória do host especificado.
+
+    #     Args:
+    #         host_id (int): ID do host onde o qubit será criado.
+
+    #     Raises:
+    #         Exception: Se o host especificado não existir na rede.
+    #     """
+    #     if host_id not in self._network.hosts:
+    #         raise Exception(f'Host {host_id} não existe na rede.')
+        
+    #     # Cria o qubit e adiciona à memória do host
+    #     qubit_id = self._count_qubit
+    #     qubit = Qubit(qubit_id, self._initial_qubits_fidelity)
+    #     self._network.hosts[host_id].add_qubit(qubit)
+    #     self._count_qubit += 1
+    #     self.logger.debug(f'Qubit {qubit_id} criado com fidelidade inicial {self._initial_qubits_fidelity} e adicionado à memória do Host {host_id}.')
+    
     def create_qubit(self, host_id: int):
         """
         Cria um qubit e adiciona à memória do host especificado.
@@ -97,34 +117,13 @@ class PhysicalLayer():
     def add_epr_to_channel(self, epr: Epr, channel: tuple):
         """
         Adiciona um par EPR ao canal.
-        
-        args:
+
+        Args:
             epr (Epr): Par EPR.
             channel (tuple): Canal.
         """
-        u, v = channel
-        if not self._network.graph.has_edge(u, v):
-            self._network.graph.add_edge(u, v, eprs=[])
-        self._network.graph.edges[u, v]['eprs'].append(epr)
+        self._network.edges[channel]['eprs'].append(epr)
         self.logger.debug(f'Par EPR {epr} adicionado ao canal {channel}.')
-        
-    def remove_epr_from_channel(self, epr: Epr, channel: tuple):
-        """
-        Remove um par EPR do canal.
-        
-        args:
-            epr (Epr): Par EPR a ser removido.
-            channel (tuple): Canal.
-        """
-        u, v = channel
-        if not self._network.graph.has_edge(u, v):
-            self.logger.debug(f'Channel {channel} does not exist.')
-            return
-        try:
-            self._network.graph.edges[u, v]['eprs'].remove(epr)
-            self.logger.debug(f'Par EPR {epr} removido do canal {channel}.')
-        except ValueError:
-            self.logger.debug(f'Par EPR {epr} não encontrado no canal {channel}.')
 
 
     def fidelity_measurement_only_one(self, qubit: Qubit):
